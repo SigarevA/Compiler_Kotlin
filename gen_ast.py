@@ -29,7 +29,6 @@ class AstNode(ABC):
                 ch0, ch = '└', ' '
             res.extend(((ch0 if j == 0 else ch) + ' ' + s for j, s in enumerate(child.tree)))
         return res
-
     def visit(self, func: Callable[['AstNode'], None])->None:
         func(self)
         map(func, self.childs)
@@ -39,6 +38,12 @@ class AstNode(ABC):
 
 
 
+class ExprNode(AstNode):
+    pass
+
+class StmtNode(ExprNode):
+    pass
+
 
 
 class BinOp(Enum):
@@ -46,3 +51,31 @@ class BinOp(Enum):
     SUB = '-'
     MUL = '*'
     DIV = '/'
+
+
+class BinNode(AstNode):
+    def __init__(self, operation, operand1, operand2):
+        self.op = operation
+        self.op1 = operand1
+        self.op2 = operand2
+
+    @property
+    def childs(self):
+        return self.op1, self.op2
+
+    def __str__(self):
+        return " ".join([self.op1, self.op, self.op2])
+
+
+class StmtListNode(StmtNode):
+    def __init__(self, *exprs: StmtNode,
+                 row: Optional[int] = None, line: Optional[int] = None, **props):
+        super().__init__(row=row, line=line, **props)
+        self.exprs = exprs
+
+    @property
+    def childs(self) -> Tuple[StmtNode, ...]:
+        return self.exprs
+
+    def __str__(self)->str:
+        return '...'
