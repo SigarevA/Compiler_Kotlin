@@ -3,25 +3,40 @@ from lark import Lark, Transformer
 parser = Lark('''
         ?start: global
 
-        global:  (expr )*
+        global:  (expr)*
             
-        ?expr: "var" ad 
+        !expr: "var" ad -> identvar
+            | "val" ad -> identval
             | "fun" function
+            | operation
             
-        ?ad: CNAME ":" (INT | FLOAT) -> advariable
+        ?ad: CNAME ":" gettype
+        
+        ?gettype: INTEGER ("=" INT)?
+            | FLOATTYPE  ("=" FLOAT)?
+            | DOUBLE  ("=" FLOAT)?
+            | SHORT ("=" INT)?
+            | LONG ("=" INT)?
+        
+        ?operation: arithmetic
+        
+        ?arithmetic : [ arithmetic (ADD | SUB) ] mult -> bin_opt
+        
+        ?mult: [ mult (MUL | DIV) ] value -> bin_opt
+             
+        ?value: NUMBER
         
         ?function: CNAME -> funname
-            
 
-        ?paramets: parametr 
-            | parametrs "," parametr           
-
-        ?parametr: CNAME 
-
-        ?parametrs: CNAME  -> name
-
-        INT: "Int"
-        FLOAT: "Float"
+        INTEGER: "Int"
+        FLOATTYPE : "Float"
+        DOUBLE : "Double"
+        SHORT : "Short"
+        LONG : "Long"
+        ADD: "+"
+        SUB: "-"
+        MUL: "*"
+        DIV: "/"
         
         OPENPARAMETR: "("
         CLOSEPARAMETR : ")"  
@@ -29,11 +44,12 @@ parser = Lark('''
         CLOSEBLOCK: "}"
         
         
-        %import common.CR
+        %import common.INT
+        %import common.FLOAT
+        %import common.NUMBER
         %import common.CNAME
         %import common.NEWLINE
-        %import common.WORD   // imports from terminal library
-        %import common.CNAME
+        
         %ignore " "
         %ignore NEWLINE
         COMMENT: "/*" /(.|\\n|\\r)+/ "*/"           
@@ -42,9 +58,22 @@ parser = Lark('''
      ''')
 
 
+
+class ASTBuilder(Transformer):
+    def bin_opt(self, args):
+        return eval(args[0])
+
+
+
+
+
+
 def parsering(code: str):
     res = parser.parse(code)
-    #print(res)
+    print(res)
     print(res.pretty("  "))
+    
+    res = ASTBuilder.transform(res)
+    print(res)
 
 

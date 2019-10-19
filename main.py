@@ -3,11 +3,7 @@ from parser_lark import *
 
 def main():
     code = '''
-        var variable: Int
-        var variable: Int
-        var sdf: Int
-        var sdf:Float
-        fun funname
+        1 + 2 + 2 * 3
     '''
     parsering(code)
 
