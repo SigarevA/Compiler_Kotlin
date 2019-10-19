@@ -8,7 +8,7 @@ parser = Lark('''
         ?expr: "var" ad 
             | "fun" function
             
-        ?ad: CNAME ":"-> advariable
+        ?ad: CNAME ":" (INT | FLOAT) -> advariable
         
         ?function: CNAME -> funname
             
@@ -20,11 +20,14 @@ parser = Lark('''
 
         ?parametrs: CNAME  -> name
 
+        INT: "Int"
+        FLOAT: "Float"
+        
         OPENPARAMETR: "("
         CLOSEPARAMETR : ")"  
         OPENBLOCK: "{"
         CLOSEBLOCK: "}"
-        //DATATYPES: ["Int""STRING""Byte"] 
+        
         
         %import common.CR
         %import common.CNAME

@@ -3,10 +3,10 @@ from parser_lark import *
 
 def main():
     code = '''
-        var variable:
-        var variable: 
-        var sdf: 
-        var sdf:
+        var variable: Int
+        var variable: Int
+        var sdf: Int
+        var sdf:Float
         fun funname
     '''
     parsering(code)
