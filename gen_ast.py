@@ -4,10 +4,8 @@ from enum import Enum
 
 
 class AstNode(ABC):
-    def __init__(self, row: Optional[int] = None, line: Optional[int] = None, **props):
+    def __init__(self, **props):
         super().__init__()
-        self.row = row
-        self.line = line
         for k, v in props.items():
             setattr(self, k, v)
 
@@ -29,6 +27,7 @@ class AstNode(ABC):
                 ch0, ch = '└', ' '
             res.extend(((ch0 if j == 0 else ch) + ' ' + s for j, s in enumerate(child.tree)))
         return res
+
     def visit(self, func: Callable[['AstNode'], None])->None:
         func(self)
         map(func, self.childs)
@@ -53,8 +52,19 @@ class BinOp(Enum):
     DIV = '/'
 
 
-class BinNode(AstNode):
-    def __init__(self, operation, operand1, operand2):
+class ExpOperand(ExprNode):
+    def __init__(self, value, **props):
+        super().__init__(**props)
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+
+
+class BinNode(ExprNode):
+    def __init__(self, operand1, operation, operand2, **props):
+        super().__init__(**props)
         self.op = operation
         self.op1 = operand1
         self.op2 = operand2
@@ -63,19 +73,17 @@ class BinNode(AstNode):
     def childs(self):
         return self.op1, self.op2
 
-    def __str__(self):
-        return " ".join([self.op1, self.op, self.op2])
-
+    def __str__(self)->str:
+        return str(self.op)
 
 class StmtListNode(StmtNode):
-    def __init__(self, *exprs: StmtNode,
-                 row: Optional[int] = None, line: Optional[int] = None, **props):
-        super().__init__(row=row, line=line, **props)
+    def __init__(self, exprs, **props):
+        super().__init__(**props)
         self.exprs = exprs
 
     @property
     def childs(self) -> Tuple[StmtNode, ...]:
-        return self.exprs
+        return (self.exprs,)
 
     def __str__(self)->str:
         return '...'

@@ -45,9 +45,16 @@ def getCodeTest2():
     '''
     return code
 
+def getCodeTest3():
+    code = '''
+        1+1+1
+        
+    '''
+    return code
+
 def main():
 
-    code = getCodeTest1()
+    code = getCodeTest3()
     parsering(code)
 
     #print(la.parse("var value :").pretty('  '))

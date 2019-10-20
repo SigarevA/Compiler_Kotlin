@@ -61,7 +61,7 @@ parser = Lark('''
         
         ?mult: [ mult (MUL | DIV) ] value
              
-        ?value: NUMBER
+        ?value: NUMBER -> litvar
             | CNAME
         
         ?function: CNAME "(" [parametrs] ")" ":" _gettype "{" "\\n" body "}" -> funname
@@ -123,13 +123,15 @@ parser = Lark('''
 
 class ASTBuilder(Transformer):
 
-
+    def litvar(self, args):
+        return ExpOperand(args[0])
 
     def foo(self, args):
-        print(len(args[0].children))
-        print(args[0])
-        print(type(args[0]))
         return StmtListNode(args[0])
+
+
+    def arithmetic(self, args):
+        return BinNode(args[0], args[1], args[2])
 
 
 
@@ -142,3 +144,4 @@ def parsering(code: str):
     print(res.pretty("  "))
 
     res = ASTBuilder().transform(res)
+    print("\n".join(res.tree))
