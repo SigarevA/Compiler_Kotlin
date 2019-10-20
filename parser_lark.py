@@ -3,39 +3,75 @@ from gen_ast import *
 
 parser = Lark('''
         ?start: foo
-
-        foo:  (expr)*
-            
-        ?expr: "var" ad -> identvar
-            | "val" ad -> identval
-            | "fun" function
-            | operation
-            
-        ?ad: CNAME ":" gettype
         
-        ?gettype: INTEGER ["=" INT]
+        foo:  (glob)*
+
+        ?glob: "fun" function
+            | expr
+            
+        ?expr: "var" _ad "\\n"-> identvar
+            | "val" _ad "\\n"-> identval
+            | IF if_rule (ELSE_IF if_rule)* (ELSE "{" body "}")?
+            | "while" while_rule
+            | "for" for_rule
+            | "when" when_rule
+            | operation
+            | standart_fun
+            
+        ?standart_fun : println 
+            | readline
+            | print
+            
+        
+        ?println : "println" "(" ")"
+        ?print : "print" "(" (CNAME | NUMBER | LETTER) ")"
+        ?readline : "readLine" "(" ")"
+          
+        _ad: CNAME ":" _gettype 
+            | readline
+        
+        _gettype: INTEGER ["=" INT]
             | FLOATTYPE  ["=" FLOAT]
             | DOUBLE  ["=" FLOAT]
             | SHORT ["=" INT]
             | LONG ["=" INT]
             | ANY ["=" NUMBER]
+            | CHAR ["=" LETTER]
+            
+        ?for_rule: "("CNAME "in" INT ".." INT ")" "{" "\\n" body "}"
         
+        ?while_rule: "(" condition ")" "{" "\\n" body "}"
+        
+        
+        ?when_rule: "(" CNAME ")" "{" "\\n" when_body "}"
+        
+        ?when_body: ( (INT | FLOAT| LETTER | ELSE ) "->" ( operation | "{" "\\n" body"}") )+ 
+        
+        ?if_rule: "(" condition ")" "{" "\\n" body "}"
+        
+        ?condition: logic_op [ (AND | OR | XOR) logic_op ]
+        
+        ?logic_op: operation (LT | GT | EQUALS | NEQUALS | LE | GE) operation
+            | CNAME
+        
+         
         ?operation: arithmetic
         
         ?arithmetic : [ arithmetic (ADD | SUB) ] mult 
         
-        ?mult: [ mult (MUL | DIV) ] value -> bin_opt
+        ?mult: [ mult (MUL | DIV) ] value
              
         ?value: NUMBER
+            | CNAME
         
-        ?function: CNAME "(" [parametrs] ")" ":" gettype "{" body "}" -> funname
+        ?function: CNAME "(" [parametrs] ")" ":" _gettype "{" "\\n" body "}" -> funname
             
         ?parametrs : (parametr)*
             | parametrs "," parametr            
             
-        parametr: CNAME ":" gettype
+        parametr: CNAME ":" _gettype
         
-        ?body : 
+        ?body : expr* -> body
                        
         INTEGER: "Int"
         FLOATTYPE : "Float"
@@ -43,11 +79,25 @@ parser = Lark('''
         SHORT : "Short"
         LONG : "Long"
         ANY: "Any"
+        CHAR: "Char"
         
         ADD: "+"
         SUB: "-"
         MUL: "*"
         DIV: "/"
+        AND: "and"
+        OR: "or"
+        XOR: "xor"
+        ELSE: "else"
+        ELSE_IF : "else if"
+        IF : "if"
+        
+        GE:      ">="
+        LE:      "<="
+        NEQUALS: "!="
+        EQUALS:  "=="
+        GT:      ">"
+        LT:      "<"
         
         OPENPARAMETR: "("
         CLOSEPARAMETR : ")"  
@@ -60,6 +110,7 @@ parser = Lark('''
         %import common.NUMBER
         %import common.CNAME
         %import common.NEWLINE
+        %import common.LETTER
         
         %ignore " "
         %ignore NEWLINE
@@ -72,18 +123,13 @@ parser = Lark('''
 
 class ASTBuilder(Transformer):
 
-    def expr(self, args):
-        print(len(args))
-        print(args[0])
-        print(len(args[0].children))
-        op1 = args[0].children[0].children[0]
-        op = args[0].children[1]
-        op2 = args[0].children[2].children[0]
-        return BinNode(op, op1, op2)
 
-    #def foo(self, args):
-        #pass
-        #return StmtListNode(args[0])
+
+    def foo(self, args):
+        print(len(args[0].children))
+        print(args[0])
+        print(type(args[0]))
+        return StmtListNode(args[0])
 
 
 
@@ -95,4 +141,4 @@ def parsering(code: str):
     print(res)
     print(res.pretty("  "))
 
-    #res = ASTBuilder().transform(res)
+    res = ASTBuilder().transform(res)
