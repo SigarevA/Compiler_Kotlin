@@ -10,13 +10,13 @@ parser = Lark('''
             | expr
             
         ?expr: "var" _ad "\\n"-> identvar
-            | "val" _ad "\\n"-> identval
+            | _ad "\\n"-> identval
             | IF if_rule (ELSE_IF if_rule)* (ELSE "{" body "}")?
-            | "while" while_rule
+            | "while" while_rule 
             | "for" for_rule
-            | "when" when_rule
-            | operation
-            | standart_fun
+            | "when" when_rule "\\n"
+            | standart_fun "\\n"
+            | operation "\\n"
             
         ?standart_fun : println 
             | readline
@@ -24,26 +24,26 @@ parser = Lark('''
             
         
         ?println : "println" "(" ")"
-        ?print : "print" "(" (CNAME | NUMBER | LETTER) ")"
+        ?print : "print" "(" (name | NUMBER | LETTER) ")"
         ?readline : "readLine" "(" ")"
           
-        _ad: CNAME ":" _gettype 
+        _ad: name ":" _gettype 
             | readline
         
-        _gettype: INTEGER ["=" INT]
-            | FLOATTYPE  ["=" FLOAT]
-            | DOUBLE  ["=" FLOAT]
-            | SHORT ["=" INT]
-            | LONG ["=" INT]
+        _gettype: INTEGER ["=" operation ]
+            | FLOATTYPE  ["=" operation ]
+            | DOUBLE  ["=" operation ]
+            | SHORT ["=" operation ]
+            | LONG ["=" operation ]
             | ANY ["=" NUMBER]
-            | CHAR ["=" LETTER]
+            | CHAR ["=" "'" LETTER "'"]
             
-        ?for_rule: "("CNAME "in" INT ".." INT ")" "{" "\\n" body "}"
+        ?for_rule: "("name "in" INT ".." INT ")" "{" "\\n" body "}"
         
         ?while_rule: "(" condition ")" "{" "\\n" body "}"
         
         
-        ?when_rule: "(" CNAME ")" "{" "\\n" when_body "}"
+        ?when_rule: "(" name ")" "{" "\\n" when_body "}"
         
         ?when_body: ( (INT | FLOAT| LETTER | ELSE ) "->" ( operation | "{" "\\n" body"}") )+ 
         
@@ -52,8 +52,7 @@ parser = Lark('''
         ?condition: logic_op [ (AND | OR | XOR) logic_op ]
         
         ?logic_op: operation (LT | GT | EQUALS | NEQUALS | LE | GE) operation
-            | CNAME
-        
+            | name
          
         ?operation: arithmetic
         
@@ -62,14 +61,13 @@ parser = Lark('''
         ?mult: [ mult (MUL | DIV) ] value
              
         ?value: NUMBER -> litvar
-            | CNAME
+            | name
         
-        ?function: CNAME "(" [parametrs] ")" ":" _gettype "{" "\\n" body "}" -> funname
+        ?function: name "(" [parametrs] ")" ":" _gettype "{" "\\n" body "}" -> funname
             
-        ?parametrs : (parametr)*
-            | parametrs "," parametr            
+        ?parametrs : parametr ("," parametr)*
             
-        parametr: CNAME ":" _gettype
+        parametr: name ":" _gettype
         
         ?body : expr* -> body
                        
@@ -104,6 +102,8 @@ parser = Lark('''
         OPENBLOCK: "{"
         CLOSEBLOCK: "}"
         
+        name : CNAME
+        
         
         %import common.INT
         %import common.FLOAT
@@ -123,16 +123,32 @@ parser = Lark('''
 
 class ASTBuilder(Transformer):
 
+    def name(self, args):
+        return Name(args[0])
+
+    def mult(self, args):
+        operation = BinOp(args[1])
+        return BinNode(args[0], operation, args[2])
+
     def litvar(self, args):
         return ExpOperand(args[0])
 
     def foo(self, args):
-        return StmtListNode(args[0])
-
+        return StmtListNode(*args)
 
     def arithmetic(self, args):
-        return BinNode(args[0], args[1], args[2])
+        operation = BinOp(args[1])
+        return BinNode(args[0], operation, args[2])
 
+    def identvar(self, args):
+        type_of_var = TypeVariable(args[1])
+        if len(args) == 2:
+            return IdentVar(args[0], type_of_var)
+        if len(args) == 3:
+            return IdentVar(args[0], type_of_var, args[2])
+
+    def parametr(self, args):
+        return (args[0], args[1])
 
 
 

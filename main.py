@@ -7,7 +7,7 @@ def getCodeTest1():
         1+2+3
         1+2+3
         1+2+3
-        fun abs():Double{
+        fun abs(fg: Int , yt:Double , yt:Double, yt:Double):Double{
             var operand: Double
             val operand: Int
             when(operand){
@@ -41,14 +41,25 @@ def getCodeTest2():
         else if(a == 8){
         }
         else{
-        }  
+        }
+        var prame: Int = 1 + 2  
+        var primary: Int = prame
     '''
     return code
 
 def getCodeTest3():
     code = '''
-        1+1+1
-        
+        var variab: Int = 9
+        var variab: Int
+        var gdffsd : Double = 3
+        gdffsd / 3 + 2 * 3 - 3
+    '''
+    return code
+
+def getCodeTest4():
+    code = '''
+        var prame: Int = 1 + 2  
+        var primary: Int = prame        
     '''
     return code
 
@@ -58,7 +69,6 @@ def main():
     parsering(code)
 
     #print(la.parse("var value :").pretty('  '))
-
 
 if __name__ == "__main__":
     main()
