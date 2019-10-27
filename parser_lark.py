@@ -10,14 +10,22 @@ parser = Lark('''
             | expr
             
         ?expr: "var" _ad "\\n"-> identvar
-            | _ad "\\n"-> identval
-            | IF if_rule (ELSE_IF if_rule)* (ELSE "{" body "}")?
-            | "while" while_rule 
-            | "for" for_rule
+            | "val" _ad "\\n"-> identval
+            | ifelse "\\n"
+            | "while" while_rule "\\n"
+            | "for" for_rule "\\n"
             | "when" when_rule "\\n"
             | standart_fun "\\n"
             | operation "\\n"
-            
+        
+        ifelse : if_rule (elseif)* (else_rule)?
+        
+        if_rule : "if" "(" condition ")" "{" "\\n" body "}"
+        
+        elseif : "else if" "(" condition ")" "{" "\\n" body "}"
+        
+        else_rule : "else" "{" body "}"    
+        
         ?standart_fun : println 
             | readline
             | print
@@ -37,8 +45,13 @@ parser = Lark('''
             | LONG ["=" operation ]
             | ANY ["=" NUMBER]
             | CHAR ["=" "'" LETTER "'"]
+            | BOOLEAN ["=" logicaloperand]
             
-        ?for_rule: "("name "in" INT ".." INT ")" "{" "\\n" body "}"
+        logicaloperand : T | F
+            
+        ?for_rule: "("name "in" (  sequence | name ) ")" "{" "\\n" body "}"
+        
+        ?sequence: INT ".." INT
         
         ?while_rule: "(" condition ")" "{" "\\n" body "}"
         
@@ -47,12 +60,10 @@ parser = Lark('''
         
         ?when_body: ( (INT | FLOAT| LETTER | ELSE ) "->" ( operation | "{" "\\n" body"}") )+ 
         
-        ?if_rule: "(" condition ")" "{" "\\n" body "}"
-        
-        ?condition: logic_op [ (AND | OR | XOR) logic_op ]
+        ?condition: [ condition (AND | OR | XOR) ] logic_op
         
         ?logic_op: operation (LT | GT | EQUALS | NEQUALS | LE | GE) operation
-            | name
+            | name -> logic_op
          
         ?operation: arithmetic
         
@@ -78,6 +89,9 @@ parser = Lark('''
         LONG : "Long"
         ANY: "Any"
         CHAR: "Char"
+        BOOLEAN : "Boolean"
+        F : "true"
+        T : "false"
         
         ADD: "+"
         SUB: "-"
@@ -119,12 +133,38 @@ parser = Lark('''
         %ignore COMMENT
      ''')
 
-
-
 class ASTBuilder(Transformer):
+
+    def for_rule(self, args):
+        pass
+
+    def sequnce(self, args):
+        return SequnceNode(ExpOperand(args[0]), ExpOperand(args[1]))
+
+    def else_rule(self, args):
+        return LogicBlock("else", args[0])
+
+    def elseif(self, args):
+        return LogicBlock("else if", args[1], args[0])
+
+    def if_rule(self, args):
+        return LogicBlock("if", args[1], args[0])
+
+    def condition(self, args):
+        operation = BinOp(args[1])
+        return BinNode(args[0], operation, args[2])
+
+    def ifelse(self, args):
+        return IfelseList(*args)
+
+    def body(self, args):
+        return StmtListNode('body', *args)
 
     def name(self, args):
         return Name(args[0])
+
+    def ifna(self, args):
+        pass
 
     def mult(self, args):
         operation = BinOp(args[1])
@@ -134,7 +174,7 @@ class ASTBuilder(Transformer):
         return ExpOperand(args[0])
 
     def foo(self, args):
-        return StmtListNode(*args)
+        return StmtListNode('...', *args)
 
     def arithmetic(self, args):
         operation = BinOp(args[1])
@@ -147,11 +187,17 @@ class ASTBuilder(Transformer):
         if len(args) == 3:
             return IdentVar(args[0], type_of_var, args[2])
 
+    def logicaloperand(self, args):
+        return ExpOperand(args[0])
+
     def parametr(self, args):
         return (args[0], args[1])
 
-
-
+    def logic_op(self, args):
+        if(len(args) == 3):
+            operation = BinOp(args[1])
+            return BinNode(args[0], operation, args[2])
+        return Name(args[0])
 
 
 def parsering(code: str):

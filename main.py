@@ -33,16 +33,19 @@ def getCodeTest1():
 
 def getCodeTest2():
     code = '''
-        val a: Int = 10
-        if(a == 10) {
+        if(3==3 and sd<= ads and 9 <= 2 or ad){
+            if(3==3 and sd<= ads and 9 <= 2 or ad){
+            }
+            else if(2 <= 4 or 9 > asf){
+            }
         }
-        else if(a == 9){
+        else if(2 <= 4 or 9 > asf){
         }
-        else if(a == 8){
+        else {
         }
-        else{
+        if(bfd){
         }
-        var prame: Int = 1 + 2  
+        var prame: Int = 1 + 2 + k
         var primary: Int = prame
     '''
     return code
@@ -51,21 +54,22 @@ def getCodeTest3():
     code = '''
         var variab: Int = 9
         var variab: Int
-        var gdffsd : Double = 3
-        gdffsd / 3 + 2 * 3 - 3
+        var true_var : Boolean = true
+        
+        3 - gdffsd / 3 + 2 * 3
     '''
     return code
 
 def getCodeTest4():
     code = '''
-        var prame: Int = 1 + 2  
-        var primary: Int = prame        
+        for(a in 3..5){
+        }
     '''
     return code
 
 def main():
 
-    code = getCodeTest3()
+    code = getCodeTest4()
     parsering(code)
 
     #print(la.parse("var value :").pretty('  '))

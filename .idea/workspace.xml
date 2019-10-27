@@ -134,6 +134,8 @@
     <watches-manager>
       <configuration name="PythonConfigurationType">
         <watch expression="args[0].children[0].children[0]" language="Python" />
+        <watch expression="args[1].tree" />
+        <watch expression="__py_debug_temp_var_1114601400" />
       </configuration>
     </watches-manager>
   </component>
