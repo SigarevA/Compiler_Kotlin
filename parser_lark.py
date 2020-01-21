@@ -1,5 +1,6 @@
 from lark import Lark, Transformer, Token
 from gen_ast import *
+from scope import Scope
 
 parser = Lark('''
         ?start: foo
@@ -8,16 +9,23 @@ parser = Lark('''
 
         ?glob: "fun" function
             | expr
-            
-        ?expr: "var" _ad "\\n"-> identvar
-            | "val" _ad "\\n"-> identval
+        
+        ?expr: identvar
+            | "val"  "\\n"-> identval
             | ifelse "\\n"
             | "while" while_rule "\\n"
             | "for" for_rule "\\n"
             | "when" when_rule "\\n"
             | standart_fun "\\n"
             | operation "\\n"
+            | returnexpr
+            
+        returnexpr : "return" exprout    
         
+        ?exprout : ifelse "\\n"
+            | "when" when_rule "\\n"
+            | operation "\\n"
+            
         ifelse : if_rule (elseif)* (else_rule)?
         
         if_rule : "if" "(" condition ")" "{" "\\n" body "}"
@@ -31,30 +39,29 @@ parser = Lark('''
             | print
             
         
-        ?println : "println" "(" ")"
-        ?print : "print" "(" (name | NUMBER | LETTER) ")"
-        ?readline : "readLine" "(" ")"
+        println : PRINTLN "("   [ ( operation | "'" LETTER "'"  ) ] ")"
+        print : PRINT "(" ("'"LETTER"'" | operation ) ")" 
+        readline : READLINE "("")"
           
-        _ad: name ":" _gettype 
-            | readline
+        identvar: "var" name ":" ( type | "Array<" type ">") "=" possiblevalue
+            | "var" name ":" (type | "Array<" type ">")
+            | "var" name "=" possiblevalue
         
-        _gettype: INTEGER ["=" operation ]
-            | FLOATTYPE  ["=" operation ]
-            | DOUBLE  ["=" operation ]
-            | SHORT ["=" operation ]
-            | LONG ["=" operation ]
-            | ANY ["=" NUMBER]
-            | CHAR ["=" "'" LETTER "'"]
-            | BOOLEAN ["=" logicaloperand]
+        
+        ?possiblevalue : operation
+            | "'" letter "'"
+            | logicaloperand 
+            | "arrayOf(" elements_arr ")"
+            | readline
             
-        logicaloperand : T | F
+        logicaloperand : (T | F)
+            | condition
             
         ?for_rule: "("name "in" (  sequence | name ) ")" "{" "\\n" body "}"
         
         ?sequence: INT ".." INT
         
         ?while_rule: "(" condition ")" "{" "\\n" body "}"
-        
         
         ?when_rule: "(" name ")" "{" "\\n" when_body "}"
         
@@ -73,14 +80,26 @@ parser = Lark('''
              
         ?value: NUMBER -> litvar
             | name
+            
+        type : INTEGER | FLOATTYPE | DOUBLE 
+            | SHORT | LONG | ANY | BOOLEAN | CHAR
+           
+        ?elements_arr : operation ("," operation)*
+            | "'" letter "'" ("," "'"letter"'")*
         
-        ?function: name "(" [parametrs] ")" ":" _gettype "{" "\\n" body "}" -> funname
+        ?letter : LETTER -> litvar
+        
+        ?function: name "(" [ parametrs ] ")" [ ":" type ] "{" "\\n" body "}" -> funname
+        
+        ?parametrs : parametr ("," parametr)* 
             
-        ?parametrs : parametr ("," parametr)*
-            
-        parametr: name ":" _gettype
+        parametr: name ":" type
         
         ?body : expr* -> body
+          
+        PRINTLN : "println"
+        PRINT : "print"
+        READLINE : "readline"
                        
         INTEGER: "Int"
         FLOATTYPE : "Float"
@@ -135,10 +154,48 @@ parser = Lark('''
 
 class ASTBuilder(Transformer):
 
-    def for_rule(self, args):
-        pass
+    def returnexpr(self, args):
+        props = {}
+        return ExprNodeReturn(args[0], **props)
 
-    def sequnce(self, args):
+    def println(self, args):
+        props = {}
+        if (len(args) == 2) :
+            props["parametrs"] = args[1] if not isinstance(args[1], Token) else ExpOperand(args[1])
+        return Signature(args[0], **props)
+
+    def readline(self, args):
+        return Signature(args[0])
+
+    def print(self, args):
+        props = {}
+        if (len(args) == 2):
+            props["parametrs"] = args[1] if not isinstance(args[1], Token) else ExpOperand(args[1])
+        return Signature(args[0], **props)
+
+    def funname(self, args):
+        props = {}
+        if len(args) == 3:
+            key = "parametrs" if isinstance(args[1], StmtListNode) else "type"
+            props[key] = args[1]
+        if len(args) == 4 :
+            props["type"] = args[1]
+            props["parametrs"] = args[2]
+        return FunNode(args[0], args[-1], **props)
+
+    def parametrs(self, args):
+        return StmtListNode("parametrs", args)
+
+    def varlesstype(self, args):
+        return IdentVar(args[0], **{"value": args[1]})
+
+    def elements_arr(self, args):
+        return ElementsArray(*args)
+
+    def for_rule(self, args):
+        return ForNode(args[0], args[1], args[2])
+
+    def sequence(self, args):
         return SequnceNode(ExpOperand(args[0]), ExpOperand(args[1]))
 
     def else_rule(self, args):
@@ -163,9 +220,6 @@ class ASTBuilder(Transformer):
     def name(self, args):
         return Name(args[0])
 
-    def ifna(self, args):
-        pass
-
     def mult(self, args):
         operation = BinOp(args[1])
         return BinNode(args[0], operation, args[2])
@@ -180,18 +234,22 @@ class ASTBuilder(Transformer):
         operation = BinOp(args[1])
         return BinNode(args[0], operation, args[2])
 
+    def type(self, args):
+        return TypeVariable(args[0])
+
     def identvar(self, args):
-        type_of_var = TypeVariable(args[1])
-        if len(args) == 2:
-            return IdentVar(args[0], type_of_var)
+        props = {}
+        key = "type" if isinstance(args[1], TypeVariable) else "value"
+        props[key] = args[1]
         if len(args) == 3:
-            return IdentVar(args[0], type_of_var, args[2])
+            props["value"] = args[2]
+        return IdentVar(args[0], **props)
 
     def logicaloperand(self, args):
         return ExpOperand(args[0])
 
     def parametr(self, args):
-        return (args[0], args[1])
+        return ( args[0], args[1] )
 
     def logic_op(self, args):
         if(len(args) == 3):
@@ -199,11 +257,15 @@ class ASTBuilder(Transformer):
             return BinNode(args[0], operation, args[2])
         return Name(args[0])
 
+    def while_rule(self, args):
+        return WhileNode(args[0], args[1])
+
 
 def parsering(code: str):
     res = parser.parse(code)
-    print(res)
     print(res.pretty("  "))
 
     res = ASTBuilder().transform(res)
+    print("\n".join(res.tree))
+    scop = Scope(res)
     print("\n".join(res.tree))
